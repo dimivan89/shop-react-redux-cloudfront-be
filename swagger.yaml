@@ -1,0 +1,66 @@
+openapi: 3.0.0
+info:
+  title: Product Service API
+  description: API for retrieving product list and product details
+  version: 1.0.0
+servers:
+  - url: https://your-api-id.execute-api.your-region.amazonaws.com/prod
+    description: AWS API Gateway (replace with actual)
+
+paths:
+  /products:
+    get:
+      summary: Get all products
+      operationId: getProductsList
+      responses:
+        '200':
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+
+  /products/{productId}:
+    get:
+      summary: Get product by ID
+      operationId: getProductById
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          description: UUID of the product to retrieve
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Single product found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 7567ec4b-b10c-48c5-9345-fc73c48a80aa
+        title:
+          type: string
+          example: Xbox Series X
+        description:
+          type: string
+          example: Microsoft Xbox Series X Console
+        price:
+          type: number
+          example: 500
+        image:
+          type: string
+          format: uri
+          example: https://images.unsplash.com/photo-1621259182978-fbf93132d53d
