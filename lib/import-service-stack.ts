@@ -44,7 +44,7 @@ export class ImportServiceStack extends cdk.Stack {
       },
     });
     
-    bucket.grantRead(importFileParserLambda);
+    bucket.grantReadWrite(importFileParserLambda);
     
     importFileParserLambda.addEventSource(
       new s3n.S3EventSource(bucket, {
