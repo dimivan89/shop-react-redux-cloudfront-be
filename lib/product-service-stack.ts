@@ -6,11 +6,12 @@ import * as path from 'path';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
-
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as subs from 'aws-cdk-lib/aws-sns-subscriptions';
 export class ProductServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
-    
+
     const api = new apigateway.RestApi(this, 'ProductApi', {
       restApiName: 'Product Service',
     });
@@ -50,7 +51,7 @@ export class ProductServiceStack extends cdk.Stack {
       allowMethods: ['GET', 'OPTIONS'],
     });
     productByIdResource.addMethod('GET', new apigateway.LambdaIntegration(getProductsById));
-    
+
     const createProduct = new lambda.Function(this, 'createProductLambda', {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'createProduct.handler',
@@ -61,10 +62,10 @@ export class ProductServiceStack extends cdk.Stack {
         STOCK_TABLE: 'stock',
       },
     });
-    
+
     productsResource.addMethod('POST', new apigateway.LambdaIntegration(createProduct));
 
-    
+
     const productsTable = dynamodb.Table.fromTableName(this, 'ProductsTable', 'products');
     const stockTable = dynamodb.Table.fromTableName(this, 'StockTable', 'stock');
 
@@ -73,7 +74,7 @@ export class ProductServiceStack extends cdk.Stack {
 
     productsTable.grantReadData(getProductsById);
     stockTable.grantReadData(getProductsById);
-    
+
     productsTable.grantWriteData(createProduct);
     stockTable.grantWriteData(createProduct);
 
@@ -93,7 +94,7 @@ export class ProductServiceStack extends cdk.Stack {
         STOCK_TABLE: 'stock'
       },
     });
-    
+
     // 3. Grant permissions to write to DynamoDB
     productsTable.grantWriteData(catalogBatchProcessLambda);
     stockTable.grantWriteData(catalogBatchProcessLambda);
@@ -104,5 +105,22 @@ export class ProductServiceStack extends cdk.Stack {
         batchSize: 5,
       })
     );
+
+
+    // 1. Create the SNS topic
+    const createProductTopic = new sns.Topic(this, 'CreateProductTopic', {
+      topicName: 'create-product-topic',
+    });
+
+    // 2. Add an email subscription (replace with your actual email)
+    createProductTopic.addSubscription(
+      new subs.EmailSubscription('www.ivanovda@gmail.com')
+    );
+
+    // 3. Pass the topic ARN to the Lambda
+    catalogBatchProcessLambda.addEnvironment('CREATE_PRODUCT_TOPIC_ARN', createProductTopic.topicArn);
+
+    // 4. Grant Lambda permission to publish
+    createProductTopic.grantPublish(catalogBatchProcessLambda);
   }
 }
