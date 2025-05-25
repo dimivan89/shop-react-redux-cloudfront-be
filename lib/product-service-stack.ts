@@ -4,6 +4,8 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as path from 'path';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 
 export class ProductServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -74,5 +76,33 @@ export class ProductServiceStack extends cdk.Stack {
     
     productsTable.grantWriteData(createProduct);
     stockTable.grantWriteData(createProduct);
+
+    // 1. Create the SQS queue
+    const catalogItemsQueue = new sqs.Queue(this, 'CatalogItemsQueue', {
+      visibilityTimeout: cdk.Duration.seconds(30),
+    });
+
+    // 2. Create the Lambda function
+    const catalogBatchProcessLambda = new lambda.Function(this, 'CatalogBatchProcessLambda', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'catalogBatchProcess.handler',
+      code: lambda.Code.fromAsset('dist'),
+      functionName: 'catalogBatchProcessLambda',
+      environment: {
+        PRODUCTS_TABLE: 'products',
+        STOCK_TABLE: 'stock'
+      },
+    });
+    
+    // 3. Grant permissions to write to DynamoDB
+    productsTable.grantWriteData(catalogBatchProcessLambda);
+    stockTable.grantWriteData(catalogBatchProcessLambda);
+
+    // 4. Connect SQS to Lambda with batch size = 5
+    catalogBatchProcessLambda.addEventSource(
+      new lambdaEventSources.SqsEventSource(catalogItemsQueue, {
+        batchSize: 5,
+      })
+    );
   }
 }
