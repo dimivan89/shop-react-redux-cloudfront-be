@@ -5,7 +5,8 @@ import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 import * as s3n from 'aws-cdk-lib/aws-lambda-event-sources';
-
+import { Queue } from 'aws-cdk-lib/aws-sqs';
+import { IQueue } from 'aws-cdk-lib/aws-sqs';
 export class ImportServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -52,6 +53,15 @@ export class ImportServiceStack extends cdk.Stack {
         filters: [{ prefix: 'uploaded/' }],
       })
     );
+
+    const catalogItemsQueue = Queue.fromQueueArn(
+      this,
+      'CatalogItemsQueue',
+      'arn:aws:sqs:us-east-1:812125550938:ProductServiceStack-CatalogItemsQueueB3B6CE23-SfnFSgWcNOVF'
+    );
+
+    importFileParserLambda.addEnvironment('CATALOG_ITEMS_QUEUE_URL', catalogItemsQueue.queueUrl);
+    catalogItemsQueue.grantSendMessages(importFileParserLambda);
 
   }
 }
