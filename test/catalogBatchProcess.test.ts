@@ -29,7 +29,7 @@ describe('catalogBatchProcess Lambda', () => {
 
   it('should write to DynamoDB and publish to SNS for each message', async () => {
     process.env.PRODUCTS_TABLE = 'products';
-    process.env.STOCKS_TABLE = 'stocks';
+    process.env.STOCK_TABLE = 'stocks';
     process.env.CREATE_PRODUCT_TOPIC_ARN = 'arn:aws:sns:region:123456789012:createProductTopic';
 
     const mockEvent = {
