@@ -2,13 +2,13 @@ import * as cdk from 'aws-cdk-lib';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
-import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 import * as s3n from 'aws-cdk-lib/aws-lambda-event-sources';
 import { Queue } from 'aws-cdk-lib/aws-sqs';
-import { IQueue } from 'aws-cdk-lib/aws-sqs';
-export class ImportServiceStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+import { CfnOutput } from 'aws-cdk-lib';
+
+export class ImportServiceStack extends cdk.Stack {  
+  constructor(scope: Construct, id: string, props: cdk.StackProps) {
     super(scope, id, props);
 
     const bucket = new s3.Bucket(this, 'ImportServiceBucket', {
@@ -29,12 +29,12 @@ export class ImportServiceStack extends cdk.Stack {
 
     bucket.grantReadWrite(importProductsFileLambda); // IAM permissions
 
-    const api = new apigateway.RestApi(this, 'ImportServiceAPI', {
-      restApiName: 'Import Service API',
-    });
+    // const api = new apigateway.RestApi(this, 'ImportServiceAPI', {
+    //   restApiName: 'Import Service API',
+    // });
 
-    const importResource = api.root.addResource('import');
-    importResource.addMethod('GET', new apigateway.LambdaIntegration(importProductsFileLambda));
+    // const importResource = api.root.addResource('import');
+    // importResource.addMethod('GET', new apigateway.LambdaIntegration(importProductsFileLambda));
 
     const importFileParserLambda = new lambda.Function(this, 'ImportFileParserLambda', {
       runtime: lambda.Runtime.NODEJS_20_X,
@@ -62,6 +62,10 @@ export class ImportServiceStack extends cdk.Stack {
 
     importFileParserLambda.addEnvironment('CATALOG_ITEMS_QUEUE_URL', catalogItemsQueue.queueUrl);
     catalogItemsQueue.grantSendMessages(importFileParserLambda);
-
+    
+    new CfnOutput(this, 'ImportProductsFileLambdaArn', {
+      value: importProductsFileLambda.functionArn,
+      exportName: 'ImportProductsFileLambdaArn',
+    });
   }
 }
